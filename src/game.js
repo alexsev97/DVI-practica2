@@ -4,20 +4,9 @@ var sprites = {
  NPC: {sx: 512, sy: 66, w: 33, h: 33, frames: 1},
  ParedIzda: {sx: 0, sy: 0, w: 512, h: 480, frames: 1},
  Player: {sx: 512, sy: 0, w: 56, h: 66, frames: 1},
- TapperGameplay: {sx: 0, sy: 480, w: 512, h: 480, frames: 1} //AQUI HAY UNA COMA
-};
-
-var enemies = {
-  straight: { x: 0,   y: -50, sprite: 'enemy_ship', health: 10, 
-              E: 100 },
-  ltr:      { x: 0,   y: -100, sprite: 'enemy_purple', health: 10, 
-              B: 75, C: 1, E: 100, missiles: 2  },
-  circle:   { x: 250,   y: -50, sprite: 'enemy_circle', health: 10, 
-              A: 0,  B: -100, C: 1, E: 20, F: 100, G: 1, H: Math.PI/2 },
-  wiggle:   { x: 100, y: -50, sprite: 'enemy_bee', health: 20, 
-              B: 50, C: 4, E: 100, firePercentage: 0.001, missiles: 2 },
-  step:     { x: 0,   y: -50, sprite: 'enemy_circle', health: 10,
-              B: 150, C: 1.2, E: 75 }
+ TapperGameplay: {sx: 0, sy: 480, w: 512, h: 480, frames: 1},
+ FullHeart: {sx: 512, sy: 165, w: 17, h: 14, frames: 1},
+ EmptyHeart: {sx: 512, sy: 179, w: 17, h: 14, frames: 1}
 };
 
 var OBJECT_PLAYER = 1,
@@ -37,6 +26,8 @@ var startGame = function() {
 const LASTLEVEL = 3;
 var level = 1;
 var bestScore = 0;
+var numVidas = 3;
+var added = false;
 
 var level1 = function(tablero){
   var clienteB1 = new Client('NPC', 112,80,44);
@@ -81,6 +72,7 @@ var playGame = function() {
   personajes.add(new Player());
   var superpuesta = new GameBoard();
   superpuesta.add(new ParedIzda());
+  superpuesta.add(new HeartManager());
 
   if (level == 1){
     level1(personajes);
@@ -110,7 +102,8 @@ var playGame = function() {
   Game.setBoard(2, superpuesta);
   Game.enableBoard(2);
   if(level == 1){
-    Game.setBoard(5,new GamePoints(0))
+    Game.setBoard(5,new GamePoints(0));
+   // Game.setBoard(5, new FullHeart());
     Game.enableBoard(5);
   }
 };
@@ -120,7 +113,7 @@ var TapperGameplay = function(){
   this.x = 0;
   this.y = 0;
 
-  this.step = function(dx){};
+  this.step = function(dx){ };
 }
 
 TapperGameplay.prototype = new Sprite();
@@ -130,7 +123,28 @@ var ParedIzda = function(){
   this.x = 0;
   this.y = 0;
 
-  this.step = function(dx){};
+  this.step = function(dx){
+   /* var FH1 = new FullHeart(440);
+    var FH2 = new FullHeart(460);
+    var FH3 = new FullHeart(480);
+    var EH1 = new EmptyHeart(440);
+    var EH2 = new EmptyHeart(460);
+    if (numVidas == 3){
+      this.board.add(FH1);
+      this.board.add(FH2);
+      this.board.add(FH3);
+    }
+    else if(numVidas == 2){
+      this.board.add(EH1);
+      this.board.add(FH2);
+      this.board.add(FH3);
+    }
+    else if(numVidas == 1){
+      this.board.add(EH1);
+      this.board.add(EH2);
+      this.board.add(FH3);
+    }*/
+  };
 }
 
 ParedIzda.prototype = new Sprite();
@@ -229,16 +243,58 @@ Glass.prototype.step = function(dt) {
     } 
   };
 
+var FullHeart = function(px){
+  this.setup('FullHeart', {x: px, y: 10});
+}
+
+FullHeart.prototype = new Sprite();
+FullHeart.prototype.step = function(dt) {};
+
+var EmptyHeart = function(px){
+  this.setup('EmptyHeart', {x: px, y: 10});
+}
+
+EmptyHeart.prototype = new Sprite();
+EmptyHeart.prototype.step = function(dt) {};
+
+var HeartManager = function(){
+  this.step = function(){
+    var FH1 = new FullHeart(440);
+    var FH2 = new FullHeart(460);
+    var FH3 = new FullHeart(480);
+    var EH1 = new EmptyHeart(440);
+    var EH2 = new EmptyHeart(460);
+    if (numVidas == 3){
+      this.board.add(FH1);
+      this.board.add(FH2);
+      this.board.add(FH3);
+    }
+    else if(numVidas == 2){
+      this.board.add(EH1);
+      this.board.add(FH2);
+      this.board.add(FH3);
+    }
+    else if(numVidas == 1){
+      this.board.add(EH1);
+      this.board.add(EH2);
+      this.board.add(FH3);
+    }
+  }
+
+  this.draw = function(){}
+
+};
+
 var DeadZone = function(px, py){
   this.x = px; this.y = py;
   this.w = 10; this.h = 66;
 };
 
 DeadZone.prototype.draw = function(){
-   var canvas = document.getElementById("game");
+   /*var canvas = document.getElementById("game");
     var ctx = canvas.getContext("2d");
     ctx.fillStyle = "green";
-    ctx.fillRect(this.x,this.y,this.w,this.h);
+    ctx.fillRect(this.x,this.y,this.w,this.h);*/
 }
 
  DeadZone.prototype.step = function(dt){
@@ -287,8 +343,6 @@ DeadZone.prototype.draw = function(){
  var GameManager = new function() {                      
   var currentClientes = 0;
   var currentGlasses = 0;
-  console.log(currentClientes);
-  console.log(currentGlasses);
 
   this.winGame = function() {
     currentGlasses = 0;
@@ -298,6 +352,7 @@ DeadZone.prototype.draw = function(){
     if (level == LASTLEVEL){ 
       if(Game.points > bestScore) bestScore = Game.points;
       level = 1;
+      numVidas = 3;
       Game.setBoard(3,new TitleScreen("You win! Best score: " + bestScore, 
                                     "Press space to play again",
                                     playGame));
@@ -310,23 +365,32 @@ DeadZone.prototype.draw = function(){
   }
 
   this.loseGame = function() {
-    currentGlasses = 0;
-    currentClientes = 0;
-    Game.disableBoard(1);
-    Game.disableBoard(2);
-    if(Game.points > bestScore) bestScore = Game.points;
-    Game.setBoard(3,new TitleScreen("You lose! Best score: " + bestScore, 
-                                   "Press space to play again",
-                                  playGame));
-    level = 1;
-    Game.enableBoard(3);
+    if(numVidas == 1) {
+        currentGlasses = 0;
+        currentClientes = 0;
+        Game.disableBoard(1);
+        Game.disableBoard(2);
+        if(Game.points > bestScore) bestScore = Game.points;
+        Game.setBoard(3,new TitleScreen("You lose! Best score: " + bestScore, 
+                                       "Press space to play again",
+                                      playGame));
+        level = 1;
+        numVidas = 3;
+        Game.enableBoard(3);
+    }
+    else{
+      --numVidas;
+      this.checkVictory();
+    }
   };
 
   this.notifyClienteExtremoDerecho = function() {
+    --currentClientes;
     this.loseGame();
   }
 
   this.notifyGlassExtremoDerecho = function() {
+    --currentGlasses;
     this.loseGame();
   }
 
@@ -348,8 +412,6 @@ DeadZone.prototype.draw = function(){
   }
 
    this.checkVictory = function() {
-    console.log(currentClientes);
-    console.log(currentGlasses);
     if(currentClientes == 0 && currentGlasses == 0)
       this.winGame();
   }
