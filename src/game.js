@@ -4,7 +4,7 @@ var sprites = {
  NPC: {sx: 512, sy: 66, w: 33, h: 33, frames: 1},
  ParedIzda: {sx: 0, sy: 0, w: 512, h: 480, frames: 1},
  Player: {sx: 512, sy: 0, w: 56, h: 66, frames: 1},
- TapperGameplay: {sx: 0, sy: 480, w: 512, h: 480, frames: 1,} //AQUI HAY UNA COMA
+ TapperGameplay: {sx: 0, sy: 480, w: 512, h: 480, frames: 1} //AQUI HAY UNA COMA
 };
 
 var enemies = {
@@ -21,25 +21,17 @@ var enemies = {
 };
 
 var OBJECT_PLAYER = 1,
-    OBJECT_PLAYER_PROJECTILE = 2,
-    OBJECT_ENEMY = 4,
-    OBJECT_ENEMY_PROJECTILE = 8,
-    OBJECT_POWERUP = 16;
+    OBJECT_BEER = 2,
+    OBJECT_CLIENT = 4,
+    OBJECT_GLASS = 8;
 
 var startGame = function() {
-  var ua = navigator.userAgent.toLowerCase();
-
-  // Only 1 row of stars
-  if(ua.match(/android/)) {
-    Game.setBoard(0,new Starfield(50,0.6,100,true));
-  } else {
-    Game.setBoard(0,new Starfield(20,0.4,100,true));
-    Game.setBoard(1,new Starfield(50,0.6,100));
-    Game.setBoard(2,new Starfield(100,1.0,50));
-  }  
-  Game.setBoard(3,new TitleScreen("Alien Invasion", 
-                                  "Press fire to start playing",
+  Game.setBoard(0, new TapperGameplay());
+  Game.setBoard(3,new TitleScreen("Mini Tapper", 
+                                  "Press space to start playing",
                                   playGame));
+  Game.enableBoard(0);
+  Game.enableBoard(3);
 };
 
 var level1 = [
@@ -54,11 +46,47 @@ var level1 = [
   [ 22000,  25000, 400, 'wiggle', { x: 100 }]
 ];
 
-
+var bestScore = 0;
 
 var playGame = function() {
-  var board = new GameBoard();
-  board.add(new TapperGameplay());
+ Game.disableBoard(3);
+
+  var fondo = new GameBoard();
+  fondo.add(new TapperGameplay());
+  var personajes = new GameBoard();
+  personajes.add(new Player());
+  var superpuesta = new GameBoard();
+  superpuesta.add(new ParedIzda());
+
+  var clienteB1 = new Client('NPC', 112,80,44);
+  var clienteB2 = new Client('NPC', 80,175,44);
+  var clienteB3 = new Client('NPC', 48,271,44);
+  var clienteB4 = new Client('NPC', 16,367,44)
+  personajes.add(new Spawner(clienteB1, 1, 4, 1));
+  personajes.add(new Spawner(clienteB2, 1, 5, 3));
+  personajes.add(new Spawner(clienteB3, 1, 6, 5));
+  personajes.add(new Spawner(clienteB4, 1, 7, 7));
+
+  personajes.add(new DeadZone(325,90));
+  personajes.add(new DeadZone(357,185));
+  personajes.add(new DeadZone(389,281));
+  personajes.add(new DeadZone(421,377));
+
+  personajes.add(new DeadZone(102,90));
+  personajes.add(new DeadZone(70,185));
+  personajes.add(new DeadZone(38,281));
+  personajes.add(new DeadZone(6,377));
+
+
+  Game.setBoard(0, fondo);
+  Game.enableBoard(0);
+  Game.setBoard(1, personajes);
+  Game.enableBoard(1);
+  Game.setBoard(2, superpuesta);
+  Game.enableBoard(2);
+  Game.setBoard(5,new GamePoints(0))
+  Game.enableBoard(5);
+
   /*
   board.add(new PlayerShip());
   board.add(new Level(level1,winGame));
@@ -68,11 +96,241 @@ var playGame = function() {
 
 var TapperGameplay = function(){
   this.setup('TapperGameplay');
+  this.x = 0;
+  this.y = 0;
+
+  this.step = function(dx){};
 }
 
 TapperGameplay.prototype = new Sprite();
 
-var winGame = function() {
+var ParedIzda = function(){
+  this.setup('ParedIzda');
+  this.x = 0;
+  this.y = 0;
+
+  this.step = function(dx){};
+}
+
+ParedIzda.prototype = new Sprite();
+
+var Player = function(){
+
+  this.setup('Player',{reloadTime: 0.25, reloadBeer: 0.3});
+  this.x = 325; this.y = 90;
+  this.reload = this.reloadTime;
+  this.rb = this.reloadBeer;
+
+  this.step = function(dt) {
+    this.reload-=dt;
+    this.rb-=dt;
+
+    if(Game.keys['abajo'] && this.reload < 0) {
+      Game.keys['abajo'] = false;
+      if (this.x == 421){this.x = 325; this.y = 90; }
+      else if (this.x == 389){this.x = 421; this.y = 377;}
+      else if (this.x == 357){this.x = 389; this.y = 281;}
+      else{this.x = 357; this.y = 185;}
+      this.reload = this.reloadTime;
+    }
+
+    else if(Game.keys['arriba'] && this.reload < 0) { 
+
+      Game.keys['arriba'] = false;
+      if (this.x == 357){this.x = 325; this.y = 90; }
+      else if (this.x == 325){this.x = 421; this.y = 377;}
+      else if (this.x == 421){this.x = 389; this.y = 281;}
+      else{this.x = 357; this.y = 185;}
+      this.reload = this.reloadTime;
+    }
+    if(Game.keys['espacio'] && this.rb < 0){
+      this.board.add(new Beer(this.x-sprites.Beer.w,this.y,-44));
+      this.rb = this.reloadBeer;
+    }
+
+};
+}
+
+Player.prototype = new Sprite();
+Player.prototype.type = OBJECT_PLAYER;
+
+var Beer = function(px, py, vel) { 
+  this.setup('Beer', { x: px, y: py, vx: vel });
+}
+
+Beer.prototype = new Sprite();
+Beer.prototype.type = OBJECT_BEER;
+
+Beer.prototype.step = function(dt) {
+    this.x += this.vx * dt;
+};
+
+
+var Client = function(sprite, px, py, vel) { 
+  this.setup(sprite, { x: px, y: py, vx: vel });
+
+}
+
+Client.prototype = new Sprite();
+Client.prototype.type = OBJECT_CLIENT;
+
+Client.prototype.step = function(dt) {
+    this.x += this.vx * dt;
+
+    var collision = this.board.collide(this,OBJECT_BEER);
+
+    if(collision) {
+      GameManager.notifyServedClient();
+      Game.points += this.points || 50;
+      this.board.remove(this);
+      this.board.remove(collision);
+      this.board.add(new Glass(this.x+10,this.y+10,this.vx));
+      GameManager.notifyNewGlass();
+    } 
+};
+
+var Glass = function(px, py, vel) { 
+  this.setup('Glass', { x: px, y: py, vx: vel });
+}
+
+Glass.prototype = new Sprite();
+Glass.prototype.type = OBJECT_GLASS;
+
+Glass.prototype.step = function(dt) {
+    this.x += this.vx * dt;
+
+    var collision = this.board.collide(this,OBJECT_PLAYER);
+
+    if(collision) {
+      Game.points += this.points || 100;
+      GameManager.notifyGlassPicked();
+      this.board.remove(this);
+    } 
+  };
+
+var DeadZone = function(px, py){
+  this.x = px; this.y = py;
+  this.w = 10; this.h = 66;
+};
+
+DeadZone.prototype.draw = function(){
+   var canvas = document.getElementById("game");
+    var ctx = canvas.getContext("2d");
+    ctx.fillStyle = "green";
+    ctx.fillRect(this.x,this.y,this.w,this.h);
+}
+
+ DeadZone.prototype.step = function(dt){
+
+  var collisionBeer = this.board.collide(this,OBJECT_BEER);
+    if(collisionBeer) {
+      GameManager.notifyBeerExtremoIzquierdo();
+      this.board.remove(collisionBeer);
+    }  
+
+  var collisionGlass = this.board.collide(this,OBJECT_GLASS);
+    if(collisionGlass) {
+      GameManager.notifyGlassExtremoDerecho();
+      this.board.remove(collisionGlass);
+    }
+
+  var collisionClient = this.board.collide(this,OBJECT_CLIENT);
+   if(collisionClient) {
+    GameManager.notifyClienteExtremoDerecho();
+      this.board.remove(collisionClient);
+    }
+ }
+
+ var Spawner = function(client,numClientes, frec, retardo){
+  this.cliente = Object.create(client); 
+  this.cliente.x = client.x; this.cliente.y = client.y; 
+  this.numClientes = numClientes; 
+  this.frec = frec; this.retardo = retardo; this.reload = retardo;
+  GameManager.notifyAddClientes(numClientes);
+ };
+
+ Spawner.prototype.step = function(dt){
+  if(this.numClientes > 0){
+    this.reload -=dt;
+    if(this.reload <= 0){
+      --this.numClientes;
+      this.reload = this.frec;
+      var copia = Object.create(this.cliente)
+      this.board.add(copia); 
+    }
+  }
+ }
+
+ Spawner.prototype.draw = function(ctx){};
+
+ var GameManager = new function() {                      
+  var currentClientes = 0;
+  var currentGlasses = 0;
+  console.log(currentClientes);
+  console.log(currentGlasses);
+
+  this.winGame = function() {
+    currentGlasses = 0;
+    currentClientes = 0;
+    Game.disableBoard(1);
+    Game.disableBoard(2);
+    if(Game.points > bestScore) bestScore = Game.points;
+    Game.setBoard(3,new TitleScreen("You win! Best score: " + bestScore, 
+                                  "Press space to play again",
+                                  playGame));
+    Game.enableBoard(3);
+  }
+
+  this.loseGame = function() {
+    currentGlasses = 0;
+    currentClientes = 0;
+    Game.disableBoard(1);
+    Game.disableBoard(2);
+    if(Game.points > bestScore) bestScore = Game.points;
+    Game.setBoard(3,new TitleScreen("You lose! Best score: " + bestScore, 
+                                   "Press space to play again",
+                                  playGame));
+    Game.enableBoard(3);
+  };
+
+  this.notifyClienteExtremoDerecho = function() {
+    this.loseGame();
+  }
+
+  this.notifyGlassExtremoDerecho = function() {
+    this.loseGame();
+  }
+
+  this.notifyBeerExtremoIzquierdo = function() {
+    this.loseGame();
+  }
+
+  this.notifyNewGlass = function() {
+    ++currentGlasses;
+  }
+
+  this.notifyGlassPicked = function() {
+    --currentGlasses;
+    this.checkVictory();
+  }
+
+  this.notifyServedClient = function() {
+    --currentClientes;
+  }
+
+   this.checkVictory = function() {
+    console.log(currentClientes);
+    console.log(currentGlasses);
+    if(currentClientes == 0 && currentGlasses == 0)
+      this.winGame();
+  }
+
+  this.notifyAddClientes = function(nClientes) {
+    currentClientes += nClientes;
+  }
+};
+
+/*var winGame = function() {
   Game.setBoard(3,new TitleScreen("You win!", 
                                   "Press fire to play again",
                                   playGame));
@@ -146,7 +404,7 @@ var Starfield = function(speed,opacity,numStars,clear) {
 };
 
 var PlayerShip = function() { 
-  this.setup('ship', { vx: 0, reloadTime: 0.25, maxVel: 200 });
+  this.setup('TapperGameplay', { vx: 0, reloadTime: 0.25, maxVel: 200 });
 
   this.reload = this.reloadTime;
   this.x = Game.width/2 - this.w / 2;
@@ -224,7 +482,8 @@ Enemy.prototype.step = function(dt) {
   this.t += dt;
 
   this.vx = this.A + this.B * Math.sin(this.C * this.t + this.D);
-  this.vy = this.E + this.F * Math.sin(this.G * this.t + this.H);
+  this.vy = this.E + th
+  is.F * Math.sin(this.G * this.t + this.H);
 
   this.x += this.vx * dt;
   this.y += this.vy * dt;
@@ -301,9 +560,9 @@ Explosion.prototype.step = function(dt) {
     this.board.remove(this);
   }
 };
-
+*/
 window.addEventListener("load", function() {
-  Game.initialize("game",sprites,playGame);
+  Game.initialize("game",sprites,startGame);
 });
 
 
