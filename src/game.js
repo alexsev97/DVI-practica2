@@ -34,23 +34,47 @@ var startGame = function() {
   Game.enableBoard(3);
 };
 
-var level1 = [
- // Start,   End, Gap,  Type,   Override
-  [ 0,      4000,  500, 'step' ],
-  [ 6000,   13000, 800, 'ltr' ],
-  [ 10000,  16000, 400, 'circle' ],
-  [ 17800,  20000, 500, 'straight', { x: 50 } ],
-  [ 18200,  20000, 500, 'straight', { x: 90 } ],
-  [ 18200,  20000, 500, 'straight', { x: 10 } ],
-  [ 22000,  25000, 400, 'wiggle', { x: 150 }],
-  [ 22000,  25000, 400, 'wiggle', { x: 100 }]
-];
-
+const LASTLEVEL = 3;
+var level = 1;
 var bestScore = 0;
 
-var playGame = function() {
- Game.disableBoard(3);
+var level1 = function(tablero){
+  var clienteB1 = new Client('NPC', 112,80,44);
+  var clienteB2 = new Client('NPC', 80,175,44);
+  var clienteB3 = new Client('NPC', 48,271,44);
+  var clienteB4 = new Client('NPC', 16,367,44)
+  tablero.add(new Spawner(clienteB1, 1, 4, 1));
+  tablero.add(new Spawner(clienteB2, 1, 5, 3));
+  tablero.add(new Spawner(clienteB3, 1, 6, 5));
+  tablero.add(new Spawner(clienteB4, 1, 7, 7));
+}
 
+var level2 = function(tablero){
+  var clienteB1 = new Client('NPC', 112,80,20);
+  var clienteB2 = new Client('NPC', 80,175,25);
+  var clienteB3 = new Client('NPC', 48,271,20);
+  var clienteB4 = new Client('NPC', 16,367,25)
+  tablero.add(new Spawner(clienteB1, 2, 6, 1));
+  tablero.add(new Spawner(clienteB2, 1, 7, 3));
+  tablero.add(new Spawner(clienteB3, 3, 6, 5));
+  tablero.add(new Spawner(clienteB4, 1, 7, 7));
+}
+
+var level3 = function(tablero){
+  var clienteB1 = new Client('NPC', 112,80,50);
+  var clienteB2 = new Client('NPC', 80,175,25);
+  tablero.add(new Spawner(clienteB1, 6, 2, 0));
+  tablero.add(new Spawner(clienteB2, 5, 4, 3));
+}
+
+var levelScreen = function(){
+  Game.setBoard(3,new TitleScreen("Level " + level, 
+                                  "Press space to enter the adventure",
+                                  playGame));
+}
+
+var playGame = function() {
+  Game.disableBoard(3);
   var fondo = new GameBoard();
   fondo.add(new TapperGameplay());
   var personajes = new GameBoard();
@@ -58,14 +82,15 @@ var playGame = function() {
   var superpuesta = new GameBoard();
   superpuesta.add(new ParedIzda());
 
-  var clienteB1 = new Client('NPC', 112,80,44);
-  var clienteB2 = new Client('NPC', 80,175,44);
-  var clienteB3 = new Client('NPC', 48,271,44);
-  var clienteB4 = new Client('NPC', 16,367,44)
-  personajes.add(new Spawner(clienteB1, 1, 4, 1));
-  personajes.add(new Spawner(clienteB2, 1, 5, 3));
-  personajes.add(new Spawner(clienteB3, 1, 6, 5));
-  personajes.add(new Spawner(clienteB4, 1, 7, 7));
+  if (level == 1){
+    level1(personajes);
+  }
+  else if (level == 2){
+    level2(personajes);
+  }
+  else if (level == 3){
+    level3(personajes);
+  }
 
   personajes.add(new DeadZone(325,90));
   personajes.add(new DeadZone(357,185));
@@ -84,14 +109,10 @@ var playGame = function() {
   Game.enableBoard(1);
   Game.setBoard(2, superpuesta);
   Game.enableBoard(2);
-  Game.setBoard(5,new GamePoints(0))
-  Game.enableBoard(5);
-
-  /*
-  board.add(new PlayerShip());
-  board.add(new Level(level1,winGame));
-  Game.setBoard(3,board);
-  Game.setBoard(5,new GamePoints(0));*/
+  if(level == 1){
+    Game.setBoard(5,new GamePoints(0))
+    Game.enableBoard(5);
+  }
 };
 
 var TapperGameplay = function(){
@@ -274,10 +295,17 @@ DeadZone.prototype.draw = function(){
     currentClientes = 0;
     Game.disableBoard(1);
     Game.disableBoard(2);
-    if(Game.points > bestScore) bestScore = Game.points;
-    Game.setBoard(3,new TitleScreen("You win! Best score: " + bestScore, 
-                                  "Press space to play again",
-                                  playGame));
+    if (level == LASTLEVEL){ 
+      if(Game.points > bestScore) bestScore = Game.points;
+      level = 1;
+      Game.setBoard(3,new TitleScreen("You win! Best score: " + bestScore, 
+                                    "Press space to play again",
+                                    playGame));
+    }
+    else{
+      ++level;
+        levelScreen();
+    }
     Game.enableBoard(3);
   }
 
@@ -290,6 +318,7 @@ DeadZone.prototype.draw = function(){
     Game.setBoard(3,new TitleScreen("You lose! Best score: " + bestScore, 
                                    "Press space to play again",
                                   playGame));
+    level = 1;
     Game.enableBoard(3);
   };
 
