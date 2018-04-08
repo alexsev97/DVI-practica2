@@ -9,17 +9,20 @@ var sprites = {
  EmptyHeart: {sx: 512, sy: 179, w: 17, h: 14, frames: 1}
 };
 
+//Sprites de la hoja barman con el jugador corriendo (4 frames) y el jugador cuando pierde
 var bar_sprites = {
   Runner: {sx: 0, sy: 500, w: 380, h: 285, frames: 4},
   Lost: {sx: 1520, sy: 500, w: 380, h: 320, frames: 1}
 };
 
+//Sprites de la hoja tip con la cerveza cayendo, sprite de cuando se coge la propina y sprite simple de la propina
 var tip_sprites = {
   FallingBeer: {sx: 96, sy: 0, w: 32, h:32},
   TouchedTip: {sx: 128, sy: 0, w: 32, h:32},
   NormalTip: {sx: 160, sy: 0, w: 32, h:32}
 }
 
+//Para facilitar muchas operaciones, se han puesto las barras como variables (coordenadas de hasta donde van por la izq, der y la coordenada y)
 var barras = {
   First: {sx: 325, sy: 90, maxIzq: 102},
   Second: {sx: 357, sy: 185, maxIzq: 70},
@@ -42,12 +45,13 @@ var startGame = function() {
   Game.enableBoard(3);
 };
 
-const LASTLEVEL = 3;
-var level = 1;
-var bestScore = 0;
-var numVidas = 3;
-var added = false;
+const LASTLEVEL = 3; //indica si hemos llegado al ultimo nivel
+var level = 1; //nivel por el que vamos
+var bestScore = 0; //mejor puntuacion hasta el momentos
+var numVidas = 3; //numero de vidas
+var added = false; //variable auxiliar para mostrar los corazones de vida
 
+//Nivel 1
 var level1 = function(tablero){
   var clienteB1 = new Client('NPC', 112,80,44);
   var clienteB2 = new Client('NPC', 80,175,44);
@@ -59,6 +63,7 @@ var level1 = function(tablero){
   tablero.add(new Spawner(clienteB4, 1, 7, 7));
 }
 
+//Nivel 2
 var level2 = function(tablero){
   var clienteB1 = new Client('NPC', 112,80,20);
   var clienteB2 = new Client('NPC', 80,175,25);
@@ -70,6 +75,7 @@ var level2 = function(tablero){
   tablero.add(new Spawner(clienteB4, 1, 7, 7));
 }
 
+//Nivel 3
 var level3 = function(tablero){
   var clienteB1 = new Client('NPC', 112,80,50);
   var clienteB2 = new Client('NPC', 80,175,25);
@@ -77,6 +83,7 @@ var level3 = function(tablero){
   tablero.add(new Spawner(clienteB2, 5, 4, 3));
 }
 
+//Funcion que muestra un pequeño titulo al cambiar de nivel
 var levelScreen = function(){
   Game.setBoard(3,new TitleScreen("Level " + level, 
                                   "Press space to enter the adventure",
@@ -85,14 +92,21 @@ var levelScreen = function(){
 
 var playGame = function() {
   Game.disableBoard(3);
+
+  //Primera capa, con el fondo del juego
   var fondo = new GameBoard();
   fondo.add(new TapperGameplay());
+
+  //Segunda capa, con el jugador, clientes y las DeadZones
   var personajes = new GameBoard();
   personajes.add(new Player(barras.First));
+
+  //Tercera capa, con la pared izquierda y los corazones de vida
   var superpuesta = new GameBoard();
   superpuesta.add(new ParedIzda());
   superpuesta.add(new HeartManager());
 
+  //En funcion del nivel, cargamos los distintos clientes
   if (level == 1){
     level1(personajes);
   }
@@ -120,12 +134,14 @@ var playGame = function() {
   Game.enableBoard(1);
   Game.setBoard(2, superpuesta);
   Game.enableBoard(2);
+  
   if(level == 1){
     Game.setBoard(5,new GamePoints(0));
     Game.enableBoard(5);
   }
 };
 
+//Animacion al coger una propina
 var TouchedTip = function(sx,sy) {
   this.setup('TouchedTip');
   this.x = sx; this.y = sy; this.time = 0;
@@ -133,7 +149,7 @@ var TouchedTip = function(sx,sy) {
   this.step = function(dt){
     this.time += dt;
     if(this.time >= 1)
-      this.board.remove(this);
+      this.board.remove(this); //pasado 1 segundo quitamos el sprite
   }
 };
 
@@ -145,11 +161,13 @@ var Tip = function(sx,sy){
 
    this.step = function(dt){
     this.time += dt;
+    //Mantenemos la propina en la barra durante 10 segundos
     if(this.time >= 10)
       this.board.remove(this);
 
     var collision = this.board.collide(this,OBJECT_RUNNER);
 
+    //Al colisionar el jugador, sumamos a la puntuacion y ponemos la animacion de coger propina
     if(collision) {
       Game.points += this.points || 1500;
       this.board.remove(this);
@@ -160,22 +178,27 @@ var Tip = function(sx,sy){
 
 Tip.prototype = new Sprite();
 
+//Jugador corriendo
 var Runner = function(barra){
   this.setup('Runner',  { vx: 0, reloadTime: 0.25, maxVel: 200, frame: 0, counter: 0});
   this.x = barra.sx-30; this.y = barra.sy; this.barra = barra;
 
   this.step = function(dt) {
+
     if(Game.keys['izquierda']) { 
-      this.counter++;
+      this.counter++; //contador auxiliar para cambiar de frame cada cierto tiempo
+      //Cada 4 pulsaciones de izquierda, se mueve el frame
       if(this.counter == 3) {
         ++this.frame;
         this.counter = 0;
       }
       if (this.frame == 4) this.frame = 0;
         this.vx = -this.maxVel; 
-     if (this.x <= barra.maxIzq)
+
+      if (this.x <= barra.maxIzq) //si hemos llegado al final de la barra, nos quedamos ahi
         this.x = barra.maxIzq;
     }
+
     else if(Game.keys['derecha']) { 
       this.counter++;
       if(this.counter == 3) {
@@ -190,8 +213,11 @@ var Runner = function(barra){
       }
     }
     else { this.frame = 0; this.vx = 0; }
+    
+    //Si estamos en mitad de la barra y pulsamos abajo o arriba, debemos volver a poner cervezas
     if(Game.keys['abajo']) {
-      this.board.remove(this);
+      this.board.remove(this); //quitamos al jugador corriendo
+      //Ponemos al jugador que pone cervezas en la barra correspondiente
       if(this.barra == barras.First) this.board.add(new Player(barras.Second));
       else if (this.barra == barras.Second) this.board.add(new Player(barras.Third));
       else if (this.barra == barras.Third) this.board.add(new Player(barras.Fourth));
@@ -204,6 +230,7 @@ var Runner = function(barra){
       else if (this.barra == barras.Third) this.board.add(new Player(barras.Second));
       else if (this.barra == barras.Fourth) this.board.add(new Player(barras.Third));
     }
+
     this.x += this.vx * dt;
 
     this.reload-=dt;
@@ -214,6 +241,7 @@ var Runner = function(barra){
 Runner.prototype = new Sprite();
 Runner.prototype.type = OBJECT_RUNNER;
 
+//Fondo de nuestro juego
 var TapperGameplay = function(){
   this.setup('TapperGameplay');
   this.x = 0;
@@ -224,6 +252,7 @@ var TapperGameplay = function(){
 
 TapperGameplay.prototype = new Sprite();
 
+//Pared izquierda
 var ParedIzda = function(){
   this.setup('ParedIzda');
   this.x = 0;
@@ -234,6 +263,7 @@ var ParedIzda = function(){
 
 ParedIzda.prototype = new Sprite();
 
+//Jugador que pone cervezas (jugador simple)
 var Player = function(barra){
 
   this.setup('Player',{reloadTime: 0.25, reloadBeer: 0.3});
@@ -248,7 +278,7 @@ var Player = function(barra){
     if(Game.keys['abajo'] && this.reload < 0) {
 
       Game.keys['abajo'] = false;
-      this.board.remove(this);
+      this.board.remove(this); //quitamos al player actual y lo movemos a otra barra
       if(this.barra == barras.First) this.board.add(new Player(barras.Second));
       else if (this.barra == barras.Second) this.board.add(new Player(barras.Third));
       else if (this.barra == barras.Third) this.board.add(new Player(barras.Fourth));
@@ -266,10 +296,10 @@ var Player = function(barra){
       this.reload = this.reloadTime;
     }
     if(Game.keys['espacio'] && this.rb < 0){
-      this.board.add(new Beer(this.x-sprites.Beer.w,this.y,-70));
-      this.rb = this.reloadBeer;
+      this.board.add(new Beer(this.x-sprites.Beer.w,this.y,-70)); //ponemos una cerveza un poco mas a la izquierda de donde esta el player con una velocidad de -70
+      this.rb = this.reloadBeer; //solo se puede crear una cerveza cada cierto tiempo
     }
-
+    //Si nos movemos a la izquierda en una barra, quitamos al jugador actual y lo cambiamos por un runner
     else if (Game.keys['izquierda']){
       this.board.remove(this);
       this.board.add(new Runner(barra));
@@ -281,6 +311,7 @@ var Player = function(barra){
 Player.prototype = new Sprite();
 Player.prototype.type = OBJECT_PLAYER;
 
+//Cerveza simple
 var Beer = function(px, py, vel) { 
   this.setup('Beer', { x: px, y: py, vx: vel });
 }
@@ -293,6 +324,7 @@ Beer.prototype.step = function(dt) {
 };
 
 
+//Cliente
 var Client = function(sprite, px, py, vel) { 
   this.setup(sprite, { x: px, y: py, vx: vel });
 
@@ -308,19 +340,20 @@ Client.prototype.step = function(dt) {
 
     if(collision) {
       GameManager.notifyServedClient();
-      Game.points += this.points || 50;
-      this.board.remove(this);
-      this.board.remove(collision);
-      this.board.add(new Glass(this.x+10,this.y+10,this.vx));
+      Game.points += this.points || 50; //sumamos los puntos
+      this.board.remove(this); //quitamos el cliente
+      this.board.remove(collision); //quitamos el objeto beer
+      this.board.add(new Glass(this.x+10,this.y+10,this.vx)); //ponemos una jarra vacia
 
+      //Las propinas se generan de forma aleatoria
       if(Math.floor((Math.random() * 3)) == 0)
         this.board.add(new Tip(this.x, this.y +15));
-
 
       GameManager.notifyNewGlass();
     } 
 };
 
+//Jarra vacia
 var Glass = function(px, py, vel) { 
   this.setup('Glass', { x: px, y: py, vx: vel });
 }
@@ -334,12 +367,13 @@ Glass.prototype.step = function(dt) {
     var collision = this.board.collide(this,OBJECT_PLAYER);
 
     if(collision) {
-      Game.points += this.points || 100;
-      GameManager.notifyGlassPicked();
-      this.board.remove(this);
+      Game.points += this.points || 100; //sumamos los puntos de recoger una jarra
+      GameManager.notifyGlassPicked(); //notificamos que ha sido recogida
+      this.board.remove(this); //y quitamos la jarra
     } 
   };
 
+//Vida
 var FullHeart = function(px){
   this.setup('FullHeart', {x: px, y: 10});
 }
@@ -347,6 +381,7 @@ var FullHeart = function(px){
 FullHeart.prototype = new Sprite();
 FullHeart.prototype.step = function(dt) {};
 
+//Vida vacia
 var EmptyHeart = function(px){
   this.setup('EmptyHeart', {x: px, y: 10});
 }
@@ -354,6 +389,7 @@ var EmptyHeart = function(px){
 EmptyHeart.prototype = new Sprite();
 EmptyHeart.prototype.step = function(dt) {};
 
+//El heartmanager es el encargado de crear los corazones segun las vidas que tengamos
 var HeartManager = function(){
   this.step = function(){
     var FH1 = new FullHeart(440);
@@ -361,6 +397,9 @@ var HeartManager = function(){
     var FH3 = new FullHeart(480);
     var EH1 = new EmptyHeart(440);
     var EH2 = new EmptyHeart(460);
+
+    //Si no habian sido pintados los corazones y segun el numero de vidas, los dibujamos
+    //El added nos ayuda a que no este todo el rato pintando/quitando corazones
     if (!added && numVidas == 3){
       this.board.add(FH1);
       this.board.add(FH2);
@@ -385,6 +424,7 @@ var HeartManager = function(){
 
 };
 
+//Zona de choque
 var DeadZone = function(px, py){
   this.x = px; this.y = py;
   this.w = 10; this.h = 66;
@@ -399,18 +439,21 @@ DeadZone.prototype.draw = function(){
 
  DeadZone.prototype.step = function(dt){
 
+  //Si choca una cerveza
   var collisionBeer = this.board.collide(this,OBJECT_BEER);
     if(collisionBeer) {
       GameManager.notifyBeerExtremoIzquierdo();
       this.board.remove(collisionBeer);
     }  
 
+  //Si choca una jarra vacia
   var collisionGlass = this.board.collide(this,OBJECT_GLASS);
     if(collisionGlass) {
       GameManager.notifyGlassExtremoDerecho();
       this.board.remove(collisionGlass);
     }
 
+  //Si choca un cliente
   var collisionClient = this.board.collide(this,OBJECT_CLIENT);
    if(collisionClient) {
     GameManager.notifyClienteExtremoDerecho();
@@ -418,7 +461,9 @@ DeadZone.prototype.draw = function(){
     }
  }
 
+ //Clientes
  var Spawner = function(client,numClientes, frec, retardo){
+  //creamos una copia del cliente con los parametros que pasamos
   this.cliente = Object.create(client); 
   this.cliente.x = client.x; this.cliente.y = client.y; 
   this.numClientes = numClientes; 
@@ -440,6 +485,7 @@ DeadZone.prototype.draw = function(){
 
  Spawner.prototype.draw = function(ctx){};
 
+ //Manager del juego
  var GameManager = new function() {                      
   var currentClientes = 0;
   var currentGlasses = 0;
@@ -449,6 +495,7 @@ DeadZone.prototype.draw = function(){
     currentClientes = 0;
     Game.disableBoard(1);
     Game.disableBoard(2);
+    //Si estamos en el ultimo nivel, mostramos que ya ha ganado
     if (level == LASTLEVEL){ 
       if(Game.points > bestScore) bestScore = Game.points;
       level = 1;
@@ -458,15 +505,17 @@ DeadZone.prototype.draw = function(){
                                     "Press space to play again",
                                     playGame));
     }
+    //Si no hemos llegado al ultimo nivel aun, significa solamente que hemos subido de nivel
     else{
       ++level;
       added = false;
-        levelScreen();
+      levelScreen();
     }
     Game.enableBoard(3);
   }
 
   this.loseGame = function() {
+    //Si solo nos quedaba una vida, entonces habremos perdido el juego
     if(numVidas == 1) {
         currentGlasses = 0;
         currentClientes = 0;
@@ -481,12 +530,15 @@ DeadZone.prototype.draw = function(){
         added = false;
         Game.enableBoard(3);
     }
+    //Si por el contrario, aun teniamos alguna vida, se nos quitara
     else{
       --numVidas;
       added = false;
-      this.checkVictory();
+      this.checkVictory(); //comprobamos si hemos ganado, ya que podemos ganar perdiendo una vida
     }
   };
+
+  //Funciones de notificacion
 
   this.notifyClienteExtremoDerecho = function() {
     --currentClientes;
@@ -525,237 +577,7 @@ DeadZone.prototype.draw = function(){
   }
 };
 
-/*var winGame = function() {
-  Game.setBoard(3,new TitleScreen("You win!", 
-                                  "Press fire to play again",
-                                  playGame));
-};
-
-var loseGame = function() {
-  Game.setBoard(3,new TitleScreen("You lose!", 
-                                  "Press fire to play again",
-                                  playGame));
-};
-
-var Starfield = function(speed,opacity,numStars,clear) {
-
-  // Set up the offscreen canvas
-  var stars = document.createElement("canvas");
-  stars.width = Game.width; 
-  stars.height = Game.height;
-  var starCtx = stars.getContext("2d");
-
-  var offset = 0;
-
-  // If the clear option is set, 
-  // make the background black instead of transparent
-  if(clear) {
-    starCtx.fillStyle = "#000";
-    starCtx.fillRect(0,0,stars.width,stars.height);
-  }
-
-  // Now draw a bunch of random 2 pixel
-  // rectangles onto the offscreen canvas
-  starCtx.fillStyle = "#FFF";
-  starCtx.globalAlpha = opacity;
-  for(var i=0;i<numStars;i++) {
-    starCtx.fillRect(Math.floor(Math.random()*stars.width),
-                     Math.floor(Math.random()*stars.height),
-                     2,
-                     2);
-  }
-
-  // This method is called every frame
-  // to draw the starfield onto the canvas
-  this.draw = function(ctx) {
-    var intOffset = Math.floor(offset);
-    var remaining = stars.height - intOffset;
-
-    // Draw the top half of the starfield
-    if(intOffset > 0) {
-      ctx.drawImage(stars,
-                0, remaining,
-                stars.width, intOffset,
-                0, 0,
-                stars.width, intOffset);
-    }
-
-    // Draw the bottom half of the starfield
-    if(remaining > 0) {
-      ctx.drawImage(stars,
-              0, 0,
-              stars.width, remaining,
-              0, intOffset,
-              stars.width, remaining);
-    }
-  };
-
-  // This method is called to update
-  // the starfield
-  this.step = function(dt) {
-    offset += dt * speed;
-    offset = offset % stars.height;
-  };
-};
-
-var PlayerShip = function() { 
-  this.setup('TapperGameplay', { vx: 0, reloadTime: 0.25, maxVel: 200 });
-
-  this.reload = this.reloadTime;
-  this.x = Game.width/2 - this.w / 2;
-  this.y = Game.height - Game.playerOffset - this.h;
-
-  this.step = function(dt) {
-    if(Game.keys['left']) { this.vx = -this.maxVel; }
-    else if(Game.keys['right']) { this.vx = this.maxVel; }
-    else { this.vx = 0; }
-
-    this.x += this.vx * dt;
-
-    if(this.x < 0) { this.x = 0; }
-    else if(this.x > Game.width - this.w) { 
-      this.x = Game.width - this.w;
-    }
-
-    this.reload-=dt;
-    if(Game.keys['fire'] && this.reload < 0) {
-      Game.keys['fire'] = false;
-      this.reload = this.reloadTime;
-
-      this.board.add(new PlayerMissile(this.x,this.y+this.h/2));
-      this.board.add(new PlayerMissile(this.x+this.w,this.y+this.h/2));
-    }
-  };
-};
-
-PlayerShip.prototype = new Sprite();
-PlayerShip.prototype.type = OBJECT_PLAYER;
-
-PlayerShip.prototype.hit = function(damage) {
-  if(this.board.remove(this)) {
-    loseGame();
-  }
-};
-
-
-var PlayerMissile = function(x,y) {
-  this.setup('missile',{ vy: -700, damage: 10 });
-  this.x = x - this.w/2;
-  this.y = y - this.h; 
-};
-
-PlayerMissile.prototype = new Sprite();
-PlayerMissile.prototype.type = OBJECT_PLAYER_PROJECTILE;
-
-PlayerMissile.prototype.step = function(dt)  {
-  this.y += this.vy * dt;
-  var collision = this.board.collide(this,OBJECT_ENEMY);
-  if(collision) {
-    collision.hit(this.damage);
-    this.board.remove(this);
-  } else if(this.y < -this.h) { 
-      this.board.remove(this); 
-  }
-};
-
-
-var Enemy = function(blueprint,override) {
-  this.merge(this.baseParameters);
-  this.setup(blueprint.sprite,blueprint);
-  this.merge(override);
-};
-
-Enemy.prototype = new Sprite();
-Enemy.prototype.type = OBJECT_ENEMY;
-
-Enemy.prototype.baseParameters = { A: 0, B: 0, C: 0, D: 0, 
-                                   E: 0, F: 0, G: 0, H: 0,
-                                   t: 0, reloadTime: 0.75, 
-                                   reload: 0 };
-
-Enemy.prototype.step = function(dt) {
-  this.t += dt;
-
-  this.vx = this.A + this.B * Math.sin(this.C * this.t + this.D);
-  this.vy = this.E + th
-  is.F * Math.sin(this.G * this.t + this.H);
-
-  this.x += this.vx * dt;
-  this.y += this.vy * dt;
-
-  var collision = this.board.collide(this,OBJECT_PLAYER);
-  if(collision) {
-    collision.hit(this.damage);
-    this.board.remove(this);
-  }
-
-  if(Math.random() < 0.01 && this.reload <= 0) {
-    this.reload = this.reloadTime;
-    if(this.missiles == 2) {
-      this.board.add(new EnemyMissile(this.x+this.w-2,this.y+this.h));
-      this.board.add(new EnemyMissile(this.x+2,this.y+this.h));
-    } else {
-      this.board.add(new EnemyMissile(this.x+this.w/2,this.y+this.h));
-    }
-
-  }
-  this.reload-=dt;
-
-  if(this.y > Game.height ||
-     this.x < -this.w ||
-     this.x > Game.width) {
-       this.board.remove(this);
-  }
-};
-
-Enemy.prototype.hit = function(damage) {
-  this.health -= damage;
-  if(this.health <=0) {
-    if(this.board.remove(this)) {
-      Game.points += this.points || 100;
-      this.board.add(new Explosion(this.x + this.w/2, 
-                                   this.y + this.h/2));
-    }
-  }
-};
-
-var EnemyMissile = function(x,y) {
-  this.setup('enemy_missile',{ vy: 200, damage: 10 });
-  this.x = x - this.w/2;
-  this.y = y;
-};
-
-EnemyMissile.prototype = new Sprite();
-EnemyMissile.prototype.type = OBJECT_ENEMY_PROJECTILE;
-
-EnemyMissile.prototype.step = function(dt)  {
-  this.y += this.vy * dt;
-  var collision = this.board.collide(this,OBJECT_PLAYER)
-  if(collision) {
-    collision.hit(this.damage);
-    this.board.remove(this);
-  } else if(this.y > Game.height) {
-      this.board.remove(this); 
-  }
-};
-
-
-
-var Explosion = function(centerX,centerY) {
-  this.setup('explosion', { frame: 0 });
-  this.x = centerX - this.w/2;
-  this.y = centerY - this.h/2;
-};
-
-Explosion.prototype = new Sprite();
-
-Explosion.prototype.step = function(dt) {
-  this.frame++;
-  if(this.frame >= 12) {
-    this.board.remove(this);
-  }
-};
-*/
+//El initialize ahora tendra los 3 tipos distintos de sprites
 window.addEventListener("load", function() {
   Game.initialize("game",sprites,bar_sprites,tip_sprites,startGame);
 });

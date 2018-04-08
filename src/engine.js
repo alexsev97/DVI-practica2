@@ -37,6 +37,7 @@ var Game = new function() {
   }
 
   // Game Initialization
+  //Ahora esta funcion recibe los datos de 3 tipos de variables (sprites simples, jugador corriendo y propina)
   this.initialize = function(canvasElementId,sprite_data,barman_data,tip_data,callback) {
     this.canvas = document.getElementById(canvasElementId);
 
@@ -152,6 +153,7 @@ var SpriteSheet = new function() {
   this.bar = { };
   this.tip = { };
 
+  /*Ahora, al cargar una hoja de sprites los podemos cargar de 3 hojas distintas que pasamos por parametro*/
   this.load = function(spriteData,barData,tipData,callback,numSheet) { 
     this.map = spriteData;
     this.bar = barData;
@@ -171,6 +173,7 @@ var SpriteSheet = new function() {
 
     var s = this.map[sprite];
     if(!frame) frame = 0;
+    //Segun la hoja de sprites, dibujamos un sprite u otro
     if(this.map[sprite]){
       var s = this.map[sprite];
        ctx.drawImage(this.image1,
@@ -187,7 +190,7 @@ var SpriteSheet = new function() {
        s.sy, 
        s.w, s.h, 
        Math.floor(x), Math.floor(y),
-       96, 86);
+       96, 86); //Ancho y altos predeterminados para escalar la imagen
     }
     else{
        var s = this.tip[sprite];
