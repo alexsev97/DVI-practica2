@@ -207,7 +207,8 @@ var Runner = function(barra){
       }
       if (this.frame == -1) 
         this.frame = 3; this.vx = this.maxVel; 
-      if(this.x >= barra.sx-40){
+      //Si llegamos al final de la barra con el runner, automaticamente los transformamos en un player
+       if(this.x >= barra.sx-40){
         this.board.remove(this);
         this.board.add(new Player(barra));
       }
