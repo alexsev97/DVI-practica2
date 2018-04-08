@@ -37,7 +37,7 @@ var Game = new function() {
   }
 
   // Game Initialization
-  this.initialize = function(canvasElementId,sprite_data,callback) {
+  this.initialize = function(canvasElementId,sprite_data,barman_data,tip_data,callback) {
     this.canvas = document.getElementById(canvasElementId);
 
     this.playerOffset = 10;
@@ -58,12 +58,12 @@ var Game = new function() {
       this.setBoard(4,new TouchControls());
     }
 
-    SpriteSheet.load(sprite_data,callback);
+    SpriteSheet.load(sprite_data,barman_data,tip_data,callback);
   };
   
 
   // Handle Input
-  var KEY_CODES = { 38: 'arriba', 40:'abajo', 32 :'espacio' };
+  var KEY_CODES = { 38: 'arriba', 40:'abajo', 32 :'espacio', 37: 'izquierda', 39: 'derecha' };
   this.keys = {};
 
   this.setupInput = function() {
@@ -149,23 +149,55 @@ var Game = new function() {
 
 var SpriteSheet = new function() {
   this.map = { }; 
+  this.bar = { };
+  this.tip = { };
 
-  this.load = function(spriteData,callback) { 
+  this.load = function(spriteData,barData,tipData,callback,numSheet) { 
     this.map = spriteData;
-    this.image = new Image();
-    this.image.onload = callback;
-    this.image.src = 'img/spritesTapper.png';
+    this.bar = barData;
+    this.tip = tipData;
+    this.image1 = new Image();
+    this.image1.onload = callback;
+    this.image1.src = 'img/spritesTapper.png';
+    this.image2 = new Image();
+    this.image2.onload = callback;
+    this.image2.src = 'img/barman.png';
+    this.image3 = new Image();
+    this.image3.onload = callback;
+    this.image3.src = 'img/tip.png';
   };
 
   this.draw = function(ctx,sprite,x,y,frame) {
+
     var s = this.map[sprite];
     if(!frame) frame = 0;
-    ctx.drawImage(this.image,
-                     s.sx + frame * s.w, 
-                     s.sy, 
-                     s.w, s.h, 
-                     Math.floor(x), Math.floor(y),
-                     s.w, s.h);
+    if(this.map[sprite]){
+      var s = this.map[sprite];
+       ctx.drawImage(this.image1,
+       s.sx + frame * s.w, 
+       s.sy, 
+       s.w, s.h, 
+       Math.floor(x), Math.floor(y),
+       s.w, s.h);
+     }
+    else if(this.bar[sprite]){
+       var s = this.bar[sprite];
+       ctx.drawImage(this.image2,
+       s.sx + frame * s.w, 
+       s.sy, 
+       s.w, s.h, 
+       Math.floor(x), Math.floor(y),
+       96, 86);
+    }
+    else{
+       var s = this.tip[sprite];
+       ctx.drawImage(this.image3,
+       s.sx + frame * s.w, 
+       s.sy, 
+       s.w, s.h, 
+       Math.floor(x), Math.floor(y),
+       s.w, s.h);
+    }
   };
 
   return this;
@@ -295,8 +327,18 @@ Sprite.prototype.setup = function(sprite,props) {
   this.sprite = sprite;
   this.merge(props);
   this.frame = this.frame || 0;
-  this.w =  SpriteSheet.map[sprite].w;
-  this.h =  SpriteSheet.map[sprite].h;
+  if(SpriteSheet.map[sprite]){
+    this.w =  SpriteSheet.map[sprite].w;
+    this.h =  SpriteSheet.map[sprite].h;
+  }
+  else if(SpriteSheet.bar[sprite]) {
+    this.w =  96;
+    this.h =  86;
+    }
+  else {
+    this.w =  SpriteSheet.tip[sprite].w;
+    this.h =  SpriteSheet.tip[sprite].h;
+    }
 };
 
 Sprite.prototype.merge = function(props) {

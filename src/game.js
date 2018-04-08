@@ -9,10 +9,29 @@ var sprites = {
  EmptyHeart: {sx: 512, sy: 179, w: 17, h: 14, frames: 1}
 };
 
+var bar_sprites = {
+  Runner: {sx: 0, sy: 500, w: 380, h: 285, frames: 4},
+  Lost: {sx: 1520, sy: 500, w: 380, h: 320, frames: 1}
+};
+
+var tip_sprites = {
+  FallingBeer: {sx: 96, sy: 0, w: 32, h:32},
+  TouchedTip: {sx: 128, sy: 0, w: 32, h:32},
+  NormalTip: {sx: 160, sy: 0, w: 32, h:32}
+}
+
+var barras = {
+  First: {sx: 325, sy: 90, maxIzq: 102},
+  Second: {sx: 357, sy: 185, maxIzq: 70},
+  Third: {sx: 389, sy: 281, maxIzq: 38},
+  Fourth: {sx: 421, sy: 377, maxIzq: 6}
+};
+
 var OBJECT_PLAYER = 1,
     OBJECT_BEER = 2,
     OBJECT_CLIENT = 4,
     OBJECT_GLASS = 8;
+    OBJECT_RUNNER = 16;
 
 var startGame = function() {
   Game.setBoard(0, new TapperGameplay());
@@ -69,7 +88,7 @@ var playGame = function() {
   var fondo = new GameBoard();
   fondo.add(new TapperGameplay());
   var personajes = new GameBoard();
-  personajes.add(new Player());
+  personajes.add(new Player(barras.First));
   var superpuesta = new GameBoard();
   superpuesta.add(new ParedIzda());
   superpuesta.add(new HeartManager());
@@ -103,10 +122,97 @@ var playGame = function() {
   Game.enableBoard(2);
   if(level == 1){
     Game.setBoard(5,new GamePoints(0));
-   // Game.setBoard(5, new FullHeart());
     Game.enableBoard(5);
   }
 };
+
+var TouchedTip = function(sx,sy) {
+  this.setup('TouchedTip');
+  this.x = sx; this.y = sy; this.time = 0;
+
+  this.step = function(dt){
+    this.time += dt;
+    if(this.time >= 1)
+      this.board.remove(this);
+  }
+};
+
+TouchedTip.prototype = new Sprite();
+
+var Tip = function(sx,sy){
+   this.setup('NormalTip',  { vx: 0, reloadTime: 0.25, maxVel: 200, frame: 0, counter: 0});
+   this.x = sx; this.y = sy; this.time = 0;
+
+   this.step = function(dt){
+    this.time += dt;
+    if(this.time >= 10)
+      this.board.remove(this);
+
+    var collision = this.board.collide(this,OBJECT_RUNNER);
+
+    if(collision) {
+      Game.points += this.points || 1500;
+      this.board.remove(this);
+      this.board.add(new TouchedTip (this.x,this.y));
+    }
+ }
+};
+
+Tip.prototype = new Sprite();
+
+var Runner = function(barra){
+  this.setup('Runner',  { vx: 0, reloadTime: 0.25, maxVel: 200, frame: 0, counter: 0});
+  this.x = barra.sx-30; this.y = barra.sy; this.barra = barra;
+
+  this.step = function(dt) {
+    if(Game.keys['izquierda']) { 
+      this.counter++;
+      if(this.counter == 3) {
+        ++this.frame;
+        this.counter = 0;
+      }
+      if (this.frame == 4) this.frame = 0;
+        this.vx = -this.maxVel; 
+     if (this.x <= barra.maxIzq)
+        this.x = barra.maxIzq;
+    }
+    else if(Game.keys['derecha']) { 
+      this.counter++;
+      if(this.counter == 3) {
+        --this.frame; 
+        this.counter = 0;
+      }
+      if (this.frame == -1) 
+        this.frame = 3; this.vx = this.maxVel; 
+      if(this.x >= barra.sx-40){
+        this.board.remove(this);
+        this.board.add(new Player(barra));
+      }
+    }
+    else { this.frame = 0; this.vx = 0; }
+    if(Game.keys['abajo']) {
+      this.board.remove(this);
+      if(this.barra == barras.First) this.board.add(new Player(barras.Second));
+      else if (this.barra == barras.Second) this.board.add(new Player(barras.Third));
+      else if (this.barra == barras.Third) this.board.add(new Player(barras.Fourth));
+      else if (this.barra == barras.Fourth) this.board.add(new Player(barras.First));
+    }
+    else if(Game.keys['arriba']){
+      this.board.remove(this);
+      if(this.barra == barras.First) this.board.add(new Player(barras.Fourth));
+      else if (this.barra == barras.Second) this.board.add(new Player(barras.First));
+      else if (this.barra == barras.Third) this.board.add(new Player(barras.Second));
+      else if (this.barra == barras.Fourth) this.board.add(new Player(barras.Third));
+    }
+    this.x += this.vx * dt;
+
+    this.reload-=dt;
+  }
+
+}
+
+Runner.prototype = new Sprite();
+Runner.prototype.type = OBJECT_RUNNER;
 
 var TapperGameplay = function(){
   this.setup('TapperGameplay');
@@ -123,36 +229,15 @@ var ParedIzda = function(){
   this.x = 0;
   this.y = 0;
 
-  this.step = function(dx){
-   /* var FH1 = new FullHeart(440);
-    var FH2 = new FullHeart(460);
-    var FH3 = new FullHeart(480);
-    var EH1 = new EmptyHeart(440);
-    var EH2 = new EmptyHeart(460);
-    if (numVidas == 3){
-      this.board.add(FH1);
-      this.board.add(FH2);
-      this.board.add(FH3);
-    }
-    else if(numVidas == 2){
-      this.board.add(EH1);
-      this.board.add(FH2);
-      this.board.add(FH3);
-    }
-    else if(numVidas == 1){
-      this.board.add(EH1);
-      this.board.add(EH2);
-      this.board.add(FH3);
-    }*/
-  };
+  this.step = function(dx){ };
 }
 
 ParedIzda.prototype = new Sprite();
 
-var Player = function(){
+var Player = function(barra){
 
   this.setup('Player',{reloadTime: 0.25, reloadBeer: 0.3});
-  this.x = 325; this.y = 90;
+  this.x = barra.sx; this.y = barra.sy; this.barra = barra;
   this.reload = this.reloadTime;
   this.rb = this.reloadBeer;
 
@@ -161,26 +246,33 @@ var Player = function(){
     this.rb-=dt;
 
     if(Game.keys['abajo'] && this.reload < 0) {
+
       Game.keys['abajo'] = false;
-      if (this.x == 421){this.x = 325; this.y = 90; }
-      else if (this.x == 389){this.x = 421; this.y = 377;}
-      else if (this.x == 357){this.x = 389; this.y = 281;}
-      else{this.x = 357; this.y = 185;}
-      this.reload = this.reloadTime;
+      this.board.remove(this);
+      if(this.barra == barras.First) this.board.add(new Player(barras.Second));
+      else if (this.barra == barras.Second) this.board.add(new Player(barras.Third));
+      else if (this.barra == barras.Third) this.board.add(new Player(barras.Fourth));
+      else if (this.barra == barras.Fourth) this.board.add(new Player(barras.First));
     }
 
     else if(Game.keys['arriba'] && this.reload < 0) { 
 
       Game.keys['arriba'] = false;
-      if (this.x == 357){this.x = 325; this.y = 90; }
-      else if (this.x == 325){this.x = 421; this.y = 377;}
-      else if (this.x == 421){this.x = 389; this.y = 281;}
-      else{this.x = 357; this.y = 185;}
+      this.board.remove(this);
+      if(this.barra == barras.First) this.board.add(new Player(barras.Fourth));
+      else if (this.barra == barras.Second) this.board.add(new Player(barras.First));
+      else if (this.barra == barras.Third) this.board.add(new Player(barras.Second));
+      else if (this.barra == barras.Fourth) this.board.add(new Player(barras.Third));
       this.reload = this.reloadTime;
     }
     if(Game.keys['espacio'] && this.rb < 0){
-      this.board.add(new Beer(this.x-sprites.Beer.w,this.y,-44));
+      this.board.add(new Beer(this.x-sprites.Beer.w,this.y,-70));
       this.rb = this.reloadBeer;
+    }
+
+    else if (Game.keys['izquierda']){
+      this.board.remove(this);
+      this.board.add(new Runner(barra));
     }
 
 };
@@ -220,6 +312,11 @@ Client.prototype.step = function(dt) {
       this.board.remove(this);
       this.board.remove(collision);
       this.board.add(new Glass(this.x+10,this.y+10,this.vx));
+
+      if(Math.floor((Math.random() * 3)) == 0)
+        this.board.add(new Tip(this.x, this.y +15));
+
+
       GameManager.notifyNewGlass();
     } 
 };
@@ -264,20 +361,23 @@ var HeartManager = function(){
     var FH3 = new FullHeart(480);
     var EH1 = new EmptyHeart(440);
     var EH2 = new EmptyHeart(460);
-    if (numVidas == 3){
+    if (!added && numVidas == 3){
       this.board.add(FH1);
       this.board.add(FH2);
       this.board.add(FH3);
+      added = true;
     }
-    else if(numVidas == 2){
+    else if(!added && numVidas == 2){
       this.board.add(EH1);
       this.board.add(FH2);
       this.board.add(FH3);
+      added = true;
     }
-    else if(numVidas == 1){
+    else if(!added && numVidas == 1){
       this.board.add(EH1);
       this.board.add(EH2);
       this.board.add(FH3);
+      added = true;
     }
   }
 
@@ -353,12 +453,14 @@ DeadZone.prototype.draw = function(){
       if(Game.points > bestScore) bestScore = Game.points;
       level = 1;
       numVidas = 3;
+      added = false;
       Game.setBoard(3,new TitleScreen("You win! Best score: " + bestScore, 
                                     "Press space to play again",
                                     playGame));
     }
     else{
       ++level;
+      added = false;
         levelScreen();
     }
     Game.enableBoard(3);
@@ -376,10 +478,12 @@ DeadZone.prototype.draw = function(){
                                       playGame));
         level = 1;
         numVidas = 3;
+        added = false;
         Game.enableBoard(3);
     }
     else{
       --numVidas;
+      added = false;
       this.checkVictory();
     }
   };
@@ -653,7 +757,7 @@ Explosion.prototype.step = function(dt) {
 };
 */
 window.addEventListener("load", function() {
-  Game.initialize("game",sprites,startGame);
+  Game.initialize("game",sprites,bar_sprites,tip_sprites,startGame);
 });
 
 
